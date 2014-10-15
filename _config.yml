@@ -1,0 +1,13 @@
+# Site settings
+title: Nikos Daniilidis
+linked_in: https://www.linkedin.com/in/ndaniilidis
+email: nikos.daniilidis@gmail.com
+description: > # this means to ignore newlines until "baseurl:"
+  A blog about science, technology, society, and everything in-between.
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: "http://yourdomain.com" # the base hostname & protocol for your site
+twitter_username: ndaniilidis
+github_username:  nikos-daniilidis
+
+# Build settings
+markdown: kramdown
