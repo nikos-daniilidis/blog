@@ -94,12 +94,15 @@ That's it!
 
 ### Combinations of paths in `_config.yml`
 
-| code | basseurl | url | links | works |
-|------|----------|-----|-------|-------|
-| 000  | blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | nothing |
-| 100  | /blog | http://nikos-daniilidis.github.io |  |  |
-| 101  | /blog | http://nikos-daniilidis.github.io/blog | http://nikos-daniilidis/github.io/blog/assets/all-pdf/daniilidis-resume.pdf | no links |
-| 111  | /blog/ | http://nikos-daniilidis.github.io/blog | http://nikos-daniilidis/github.io/blog/assets/all-pdf/daniilidis-resume.pdf | no links |
+| code | basseurl | url | page links | file links | broken |
+|------|----------|-----|------------|------------|--------|
+| 000  | blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis.github.io/blog/blog/about/ | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | all links |
+| 001  | blog | http://nikos-daniilidis.github.io/blog | http://nikos-daniilidis.github.io/blog/blog/about/ | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf |
+| 010  | blog/ | http://nikos-daniilidis.github.io |  |  |  |
+| 011  | blog/ | http://nikos-daniilidis.github.io/blog |  |  |  |
+| 100  | /blog | http://nikos-daniilidis.github.io |  |  |  |
+| 101  | /blog | http://nikos-daniilidis.github.io/blog |  | http://nikos-daniilidis/github.io/blog/assets/all-pdf/daniilidis-resume.pdf | file links |
+| 111  | /blog/ | http://nikos-daniilidis.github.io/blog |  |  | file links |
 
 
 
