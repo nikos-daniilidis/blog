@@ -94,8 +94,8 @@ That's it!
 
 ### Combinations of paths in `_config.yml`
 
-| basseurl | url | links | works |
-|----------|-----|-------|-------|
-| blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | nope |
+| code | basseurl | url | links | works |
+|------|----------|-----|-------|-------|
+| 000  | blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | nope |
 
 
