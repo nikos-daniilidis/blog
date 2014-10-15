@@ -22,10 +22,20 @@ _Done!_
 
 This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyll-2-ubuntu-14-04/)). Others are  possible.
 
-* Install Ruby, Ruby development libraries, make command `sudo apt-get install ruby ruby-dev make`
-* Install jekyll `sudo gem install jekyll`
-* Circumvent current javascript issue with Ubuntu (12.04, 14.04) `sudo apt-get install nodejs`
+* Install Ruby, Ruby development libraries, make command 
+
+		sudo apt-get install ruby ruby-dev make
+
+* Install jekyll 
+
+		sudo gem install jekyll
+
+* Circumvent current javascript issue with Ubuntu (12.04, 14.04) 
+
+		sudo apt-get install nodejs
+
 * `sudo gem install rdiscount --no-rdoc --no-ri`
+
 * As per Github instructions, it is safest to use the github pages gem. Create a file called Gemfile inside your local repository. The contents of Gemfile should be:
 
 		source 'https://rubygems.org'
@@ -34,8 +44,13 @@ This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyl
 		versions = JSON.parse(open('https://pages.github.com/versions.json').read)
 		gem 'github-pages', versions['github-pages']
 
-* Install bundler in your local repository: `nikos@nikos-pseudomac:~/bin/github-pages/blog$ gem install bundler`
-* Install jekyll using bundle `nikos@nikos-pseudomac:~/bin/github-pages/blog$ bundle install`
+* Install bundler in your local repository: 
+
+		nikos@nikos-pseudomac:~/bin/github-pages/blog$ gem install bundler
+
+* Install jekyll using bundle 
+
+		nikos@nikos-pseudomac:~/bin/github-pages/blog$ bundle install
 
 ## After jekyll is installed, getting started
 
