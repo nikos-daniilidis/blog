@@ -1,0 +1,50 @@
+---
+layout: post
+title:  "Tides and fads in the work of geeks: fashionable and hot areas in physics, 1970-2010"
+date:   2014-06-09 00:00:01
+categories: jekyll update
+---
+The purpose here is to explore the historic evolution of trends in physics, as revealed by the Physical Review Letters archive. Physical Review Letters was introduced in 1958 by the American Physical Society as a means to publish results in a quick 'n dirty manner. The idea was that some results are important enough to warrant a quick few-page report before a full length report could be written. Over the years, PRL became the standard for physics research, with every result which is supposed to be somehow worth learning about appearing in it (if not in Nature or Science). At the same time, the results which appeared in PRL were guaranteed high enough impact, that the full-length reports were often not published. I might return to the effects of impactism on modern research later, but now I am just thirsty to look at research trends.
+
+The first thing to do, is plot the trends in the categories that were assigned by the Editors at the time of each article's publication. To do this, I need to find out how many articles were published each year under every category. The category assignments have changed over time to follow the evolution of scientific ideas and fashions, so I had to figure out which are the 'real' categories behind the 24 different category titles appearing in the PRL archive. I will not show here the gory detail of how this is done, you can check it out in the IPython notebook [here](https://github.com/nikos-daniilidis/haystack/blob/master/parse-prl-xml.ipynb) (and [html](http://nikos-daniilidis.github.io/haystack/trends-prl-xml.html) if you want to look at it in your browser). With all this said and done, I came up with the following 8 categories:
+
+1. Plasmas, fluids, non-linear dynamics, classical optics
+
+2. Atomic, molecular, and optical physics
+
+3. Nuclear physics
+
+4. Elementary particle physics
+
+5. Condensed matter physics
+
+6. Gravitation, astronomy, and astrophysics
+
+7. General physics
+
+8. Interdisciplinary physics
+
+Here is what the trends look like. I am plotting fraction of articles in a specific category for each year between 1970 and 2009.
+
+![all prl trends](/assets/2014-06-09-prl-1970-2010/all-prl-mess.png)
+
+By plotting everything together, as in the above image, not much is visible. The only clear trend is that condensed matter physics was becoming increasingly important until 1990, and then started to recede. It also appears like the loss of condensed matter physics was the gain of 'General Physics' and 'Interdisciplinary Physics'. We can look at the data more closely.
+
+First, I look at the areas which were lost in the clumped-up mess of the above figure. By plotting the trends in nuclear physics, particle physics, and astronomy related-fields, it is clear that the great gains in condensed matter physics between 1970 and 1990 come at the expense of nuclear physics and elementary particle physics. Meanwhile, astronomy and related areas are showing a slow but steady increase between 1975 and 1990. All three areas seem to hold their ground after 1990, but nuclear and elementary particle physics account for only 25% of the traffic they had back in 1970.
+
+![nuclear, elementary particles, astro](/assets/2014-06-09-prl-1970-2010/nuclear-high-energy-astro.png)
+
+Next, I take a look at two areas which stood their ground throughout this period. AMO physics and the plasmas/fluids/non-linear effects area. Both of them seem remarkably -if not alarmingly- stable. There seems to be a depression in plasmas/fluids/etc. between 1973 and 1992. This is likely due to a 'unlabeled scholar effect', where areas of research do not clearly fall within any of the existing categories and end up appearing under 'General physics'. During this period, the area of 'General physics' is showing increased activity -likely due to the fact that many groups which did not publish under 'Fluids, Plasmas, and Electric Discharges', nor under 'Classical Phenomenology' (the labels of the time) found a better fit under the 'General physics' label (I show the activity in 'General physics' in the graph after this one).
+
+![amo, plasma, fluids](/assets/2014-06-09-prl-1970-2010/amo-plasma-fluids-non-linear.png)
+
+This example of  possibly mislabeled work, highlights the Editor's classification dilemma: How to pick classification categories which will include most of the work without complains from the authors, but also last a long time. This is a hard problem, which explains why terms like General Physics persist, but occasionally acquire subclasses ('quantum information' and 'biological physics'). Such subclasses will either take on a life of their own (once a field gets established), or perish.
+
+Finally, I am going to try and answer who put that dent on condensed matter after 1990. The most likely candidates are the two categories  which typically contain the emerging research areas: 'General physics' and 'Interdisciplinary physics'. Indeed, by looking at their historical trends, the increase in these two areas between 1990 and 2010 could account for most of the loss in condensed matter. The turnover can probably be traced to areas such as soft condensed matter, biophysics and quantum information. Interestingly, while AMO physics has also been a major player in quantum information, it has lost little of its market share during the same period. Perhaps biophysics was a bigger player until 2010, while quantum information really took off after 2010. It would be interesting to have a record of more recent years to see the evolution of these trends.
+
+![amo, condensed matter, general](/assets/2014-06-09-prl-1970-2010/amo-condensed-matter-general-etc.png)
+
+This has been an interesting exercise, and even taught me things I did not know about physics! At the same time, it gave a clear message for what I plan to do next, i.e. try to analyse clustering in physics publications. Preassigned categories have their limitations. When trying to look at clustering by category, hierarchical clustering algorithms might be the best option. I will need to use my best judgement in choosing/reducing among the existing category names, but always keep in mind that some of the labels were poorly chosen, or are simply too generic to show  much of a consistent pattern. For example, what internal consistency can I expect to find in areas like 'General Physics', which serve as containers for the emerging and un-categorizable areas of the day?
+
+Most of the effort in producing this post went in parsing the xml files which contain the archive information for the 95000 pieces that appeared in PRL throughout this period. I had to write  my own specialized xml parsers to deal with badly formatted xml in the original data. You can check out how I did the analysis in this [html](http://nikos-daniilidis.github.io/haystack/trends-prl-xml.html) and the data parsing in this [html](http://nikos-daniilidis.github.io/haystack/parse-prl-xml.html). As already mentioned, the data for this post were kindly provided by the APS. Obviously, any possible misrepresentation in the APS archive data is entirely the fault of the author. [Same post on wordpress](http://oligotropos.wordpress.com/2014/06/09/tides-and-fads-in-the-work-of-geeks-fashionable-and-hot-areas-in-physics-1970-2010/).
+

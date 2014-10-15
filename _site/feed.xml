@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Nikos Daniilidis</title>
+    <description>A blog about science, technology, society, and everything in-between.
+</description>
+    <link>http://yourdomain.com/</link>
+    <atom:link href="http://yourdomain.com/feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Tue, 14 Oct 2014 17:53:31 -0700</pubDate>
+    <lastBuildDate>Tue, 14 Oct 2014 17:53:31 -0700</lastBuildDate>
+    <generator>Jekyll v2.4.0</generator>
+    
+      <item>
+        <title>Map/Reduce: 21st century Lemmings</title>
+        <description>&lt;p&gt;A while ago I started learning and setting up small-scale programming jobs on Hadoop/MapReduce. My first 
+reaction to the new tools was “Wow, this is empowering!”. For the first time since I got into the business of 
+machine learning and data science, I felt I could reach things beyond the capabilities of my desktop PC. At 
+the same time, my overall feeling in going through the logic of the Map Reduce framework, was a déjà vu from 
+my teenage years, when a  friend and I would play &lt;a href=&quot;http://en.wikipedia.org/wiki/Lemmings_%28video_game%29&quot;&gt;Lemmings&lt;/a&gt; 
+on his Atari for hours: You are given an army of small, dumb workers. Get them to work together the right way, 
+and you are guaranteed to have awesome results and fun along the way. In this spirit, this will be the first of a number of posts on MapReduce.&lt;/p&gt;
+
+&lt;p&gt;As a general reminder, a Map/Reduce process consists of two parts. In the first part, a number of so-called “mappers” 
+go through the data and produce &lt;code&gt;key,value&lt;/code&gt; pairs. The mappers can each go through a different chunk of the data, so 
+that they work in parallel. These pairs are then sorted on the keys, partitioned into new chunks, and passed to the 
+reducers (note, however, that an additional “combiner” stage can be added after the mappers’ job is done, e.g. to 
+alleviate network traffic on a computer cluster). The reducers do some additional analysis on the &lt;code&gt;key,value&lt;/code&gt; pairs 
+(for example count how many different values appear for each key), and produce a final result which should normally 
+be human-readable.&lt;/p&gt;
+
+&lt;p&gt;For example, imagine you have two decks of cards which are mixed together, and want to find out if any cards are 
+misssing from one of the decks. One basic check is to go through the decks, and see if there are four cards for each 
+figure and for each deck. To do this, you split the mixed-up deck in two and give one half to each of your two kids 
+(the mappers). You tell them to go through the cards, and for each card write on a little note the type of figure 
+and which deck it came from (the &lt;em&gt;key&lt;/em&gt;). In this particular example it does not matter what you pass as a &lt;em&gt;value&lt;/em&gt;, 
+so the value can be blank (say null). At the end you have a large number of little papers saying &lt;em&gt;(Ace Deck 1, null)&lt;/em&gt;, 
+&lt;em&gt;(Eight Deck 2, null)&lt;/em&gt;, ans so on. The next step is to sort the little pieces of paper, according to the figure value 
+on them (e.g. &lt;em&gt;Ace&lt;/em&gt;, &lt;em&gt;Two&lt;/em&gt;, &lt;em&gt;Three&lt;/em&gt;, etc.), followed by the deck value on them (i.e. all of the notes on &lt;em&gt;Deck 1&lt;/em&gt; come before 
+the  papers from &lt;em&gt;Deck 2&lt;/em&gt;). After this  is done, you split the stack of sorted paper notes in two. You take one half, 
+and your spouse the other half. Now you two are the reducers: you each go through your stack of notes, and keep a 
+register for each figure and deck. In other words, you record how many notes you saw saying &lt;em&gt;(Aces Deck 1, null)&lt;/em&gt;, 
+&lt;em&gt;(Eight Deck 2, null)&lt;/em&gt;, and so on. Because of the sorting, you will see all the notes about Aces from &lt;em&gt;Deck 1&lt;/em&gt; before 
+you see any other note, so as soon as you see a Two from &lt;em&gt;Deck 1&lt;/em&gt;, you can write down how many Aces from &lt;em&gt;Deck 1&lt;/em&gt; you saw. 
+If you end up with a three, you know one ace is missing from deck one, and you can note  this on a different piece of 
+paper. The exact same thing holds for your spouse. In the end you can put your summary notes down to see how many 
+figures of each kind are missing from each deck, and that’s all there is. This is an example of solving a counting problem 
+using Map/Reduce. Of course, in a real implementation there are several kinds of issues having to do with the fact that 
+the machines doing the work are on a  cluster with certain communication constrains between the machines, and with some 
+of the machines occasionally failing, but I will not go into this. &lt;/p&gt;
+
+&lt;p&gt;I will not cover in detail how the Map/Reduce framework solves different kinds of problems. If you are  interested in a 
+basic introduction, the Udacity course videos are excellent. Instead of repeating that material, I will show how the 
+framework solves a particular kind of problem: creating an inverted index of words appearing on an online forum. The data 
+I will work on is from the Udacity forum, and you can find the complete set &lt;a href=&quot;http://content.udacity-data.com/course/hadoop/forum_data.tar.gz&quot;&gt;here&lt;/a&gt;. 
+This forum is similar to the Stack Exchange websites, and was built using &lt;a href=&quot;http://www.osqa.net/&quot;&gt;OSQA&lt;/a&gt;. Each post in 
+the forum is a node which contains the text of the post, information about the author, the parent node for answer and 
+comment posts, etc. My goal is to go through all the posts in the forum, and for each word, list all of the nodes on which 
+the word appears. However, I want to be able to show the data as it is being processed, so I will work on a subset of the 
+full forum data, which I can easily inspect on my text editor. You can find the input data &lt;a href=&quot;https://github.com/nikos-daniilidis/hadoop-mapreduce-o&quot;&gt;here&lt;/a&gt;, 
+under the name &lt;code&gt;testfile-forum&lt;/code&gt;. &lt;/p&gt;
+
+&lt;p&gt;To solve the problem using Map/Reduce, we will need to break it into two tasks. First we will process the raw data and output 
+a series of &lt;code&gt;key,value&lt;/code&gt; pairs (this is the mappers’ job). Since we want to find the nodes in which a certain word appears, 
+we will use the words as keys and the values will be node ids. The pseudocode for the task looks something like the following&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;    for each entry in forum
+        find the entry text
+        find the node id
+        split the entry text into words
+        for each word in the entry text
+            print word, node id
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In python, this looks as follows:
+import sys, csv&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;	reader = csv.reader(sys.stdin, delimiter='\t')
+	noNoList = ['.',',','!','?',':',';','\&quot;','(',')','&amp;lt;','&amp;gt;','[',']','#','$','=','-','/']
+	
+	for line in reader:
+		if line[0]==&quot;id&quot;:
+			continue
+		elif len(line) == 19:
+			nodeid = line[0]
+			body = line[4]
+		for ch in noNoList:
+			body = body.replace(ch,&quot; &quot;)
+		body = body.replace(&quot;  &quot;,&quot; &quot;)
+		wordlist = body.lower().split(&quot; &quot;)
+		for word in wordlist:
+			print &quot;{0}\t{1}&quot;.format(word, nodeid)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can find this as &lt;code&gt;mapper9.py&lt;/code&gt; &lt;a href=&quot;https://github.com/nikos-daniilidis/hadoop-mapreduce-o&quot;&gt;here&lt;/a&gt;. If you convert this python script 
+to an executable file (using &lt;code&gt;chmod +x mapper9.py&lt;/code&gt;), you can simulate the action of the map and sort by streaming the contents of 
+the test file to the mapper, and sorting the output of the mapper (on a terminal this is done using &lt;code&gt;cat | ./mapper9.py | sort&lt;/code&gt;). 
+The output is pretty long, and there are a lot of “non-word” items, since  I did not make any particular effort to clean up the text 
+in the mapper function. Here is a section of the output which should make the next step obvious:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;	any	2741
+	any	7185
+	application	26454
+	are	2312
+	as	2312
+	as	2312
+	audio	2312
+	be	2312
+	be	6361
+	being	2741
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You can see that sorting the output of the mapper makes the life of the reducers much easier. They can be very dumb programs, using 
+limited resources. If a reducer is given this segment of the mapper output, all that is needed is for it to make a list of all the 
+indices, as long as the key is the same. When the key changes, it can dump the key and list of node ids to the putput, and start over 
+with the next key. In Python, this looks as follows: &lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;	import sys, string
+
+	oldKey = None
+	nodeList = []
+	listSeparator = &quot;, &quot;
+
+	for line in sys.stdin:
+		data_mapped = line.strip().split(&quot;\t&quot;)
+		if len(data_mapped) != 2:
+			# Something has gone wrong. Skip this line.
+			continue
+
+		thisKey, thisNode = data_mapped
+
+		if oldKey and oldKey != thisKey:
+			nodeList.sort()
+			numNodes = len(nodeList)
+			nodeStr = string.join(nodeList,listSeparator)
+			print &quot;{0}\t{1}\tTotal\t{2}&quot;.format(oldKey,nodeStr,str(numNodes))
+			oldKey = thisKey; # reduntant but whatever
+			nodeList = []        
+
+		oldKey = thisKey
+		nodeList.append(thisNode.strip('\&quot;'))
+
+	if oldKey != None:
+		nodeList.sort()
+		numNodes = len(nodeList)
+		nodeStr = string.join(nodeList,listSeparator)
+		print &quot;{0}\t{1}\tTotal\t{2}&quot;.format(oldKey,nodeStr,str(numNodes))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;When we feed the sorted output of the mapper to this function (using &lt;code&gt;cat | ./mapper9.py | sort | ./reducer9.py&lt;/code&gt;), the result is, again, 
+a long file. The section of the file pertaining to the section of mapper output we saw above, is here:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;	any	2741, 7185	Total	2
+	application	26454	Total	1
+	are	2312	Total	1
+	as	2312, 2312	Total	2
+	audio	2312	Total	1
+	be	2312, 6361	Total	2
+	being	2741	Total	1
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And that is all. As you can see, in this particular example I have asked the reducer to do a little bit more work and tell me how many 
+times each word has appeared, but the essence doesn’t change. &lt;/p&gt;
+
+&lt;h3 id=&quot;the-caveat&quot;&gt;The caveat&lt;/h3&gt;
+
+&lt;p&gt;I chose here two examples which are easy to follow through, but could give an oversimplified immpression of the actual issues in using the MapReduce framework. The types of problems I described above(counting and creating inverted index), are relatively easy, in that they do not tax the computer cluster with too much communication between the different machines carrying out individual map tasks. As an example of a situation which is more complicated, consider any algorithm which involves matrix multiplication, e.g. the matrix multiplication common in algorithms for calculating the page rank of web pages (see excellent discussion &lt;a href=&quot;http://www.mmds.org/&quot;&gt;here&lt;/a&gt;). In such cases, relatively efficient solutions exist within the MapReduce framework (by subdividing the matrices to small blocks which are processed in parallel). However, there  exist problems (matrix inversion) for which -to my knowledge- efficient implementations are still under way.  &lt;a href=&quot;http://oligotropos.wordpress.com/2014/10/13/mapreduce-lemmings-in-the-21st-century/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+
+</description>
+        <pubDate>Mon, 13 Oct 2014 10:54:02 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/10/13/Map-Reduce:-21st-century-Lemmings.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/10/13/Map-Reduce:-21st-century-Lemmings.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Life in vacuum</title>
+        <description>&lt;p&gt;The original intention of this post was to talk about using real analysis to understand a concept in set theory which bugged me. I consequently had to heavily edit the post, after friends informed me that I had gotten the logic aspect all wrong. So the post is really a cautionary tale about trying not to be the proverbial arrogant physicist &lt;a href=&quot;http://molbiohut.wordpress.com/2012/12/10/arrogance-of-physicists-towards-biology/&quot;&gt;1&lt;/a&gt;,&lt;a href=&quot;http://scienceblogs.com/pharyngula/2011/02/16/why-do-physicists-think-they-a/&quot;&gt;2&lt;/a&gt;,&lt;a href=&quot;http://galileospendulum.org/2011/02/17/the-arrogance-of-physicists/&quot;&gt;3&lt;/a&gt;,&lt;a href=&quot;http://www.smbc-comics.com/index.php?db=comics&amp;amp;id=2556#comic&quot;&gt;4&lt;/a&gt;, and about so called &lt;a href=&quot;http://en.wikipedia.org/wiki/Vacuous_truth&quot;&gt;“vacuous truths”&lt;/a&gt;. In fact, it could be titled “How I learned to stop worrying and love the empty set”.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-10-02-Life-in-vacuum/smbphysicist2.png&quot; alt=&quot;blabbing physicist&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The discussion which inspired me to start on this topic had to do with the correct implementation (in the &lt;a href=&quot;http://www.scala-lang.org/&quot;&gt;scala&lt;/a&gt; programming language) of a toolbox which allows the user to define mathematical sets, as well as a number of functions on those sets, for example union, intersection, difference, etc. In specific, I was in disagreement with two other programmers on what would be acceptable behavior for a function which checks if a condition &lt;script type=&quot;math/tex&quot;&gt; p(x)&lt;/script&gt; is true for all elements &lt;script type=&quot;math/tex&quot;&gt; x&lt;/script&gt; in a set, &lt;script type=&quot;math/tex&quot;&gt; S&lt;/script&gt;. Let’s call this function forall. The sets for which we were implementing the function can contain integers only, so in scala syntax the definition of forall would be&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;	forall(S: Set, p: Int =&amp;gt; Booolean): Boolean
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the formal way to define a function which takes two arguments: &lt;code&gt;S&lt;/code&gt;: a set (whatever this data type may be), and &lt;code&gt;p&lt;/code&gt;: a function which maps integer values to boolean values. The &lt;code&gt;forall&lt;/code&gt; function returns a boolean value, true if &lt;script type=&quot;math/tex&quot;&gt; p(x)&lt;/script&gt; holds for all &lt;script type=&quot;math/tex&quot;&gt; x&lt;/script&gt; in &lt;script type=&quot;math/tex&quot;&gt; S&lt;/script&gt;, and false otherwise. For example if &lt;script type=&quot;math/tex&quot;&gt; S = \left[1,2,3\right]&lt;/script&gt;, and &lt;script type=&quot;math/tex&quot;&gt; p(x) = (x\;\; is\;\; even)&lt;/script&gt;, then &lt;code&gt;forall(S,p)&lt;/code&gt; evaluates to false, while if &lt;script type=&quot;math/tex&quot;&gt; p(x) = (x\;\; is\;\; positive)&lt;/script&gt; then &lt;code&gt;forall(S,p)&lt;/code&gt; evaluates to true. To smooth the notation from now on, I will use &lt;script type=&quot;math/tex&quot;&gt; f\left(S,p\right)&lt;/script&gt; to denote the &lt;code&gt;forall(S,p)&lt;/code&gt; function. I will also replace the logical value of true by 1, and logical false by 0.&lt;/p&gt;
+
+&lt;p&gt;Now the disagreement was about the behavior of &lt;script type=&quot;math/tex&quot;&gt; f\left(S,p\right)&lt;/script&gt; under extreme conditions: What should be the output if &lt;script type=&quot;math/tex&quot;&gt; S&lt;/script&gt; is the empty set, and the function &lt;script type=&quot;math/tex&quot;&gt; p(x)&lt;/script&gt; evaluates to 0 (false) for all &lt;script type=&quot;math/tex&quot;&gt; x&lt;/script&gt;? The answer of the other programmers was along the lines of: I am trying to check if for all &lt;script type=&quot;math/tex&quot;&gt; x&lt;/script&gt; in &lt;script type=&quot;math/tex&quot;&gt; S&lt;/script&gt;, &lt;script type=&quot;math/tex&quot;&gt; p(x)&lt;/script&gt; is 1 (i.e. true). To show this, I have to demonstrate that I cannot find any element in &lt;script type=&quot;math/tex&quot;&gt; S&lt;/script&gt; for which &lt;script type=&quot;math/tex&quot;&gt; p(x)&lt;/script&gt; is 0.&lt;/p&gt;
+
+&lt;p&gt;For example, the statement (x is not equal to x) is true for all elements of the empty set, because there is no element of the empty set for which the statement (x is not equal to x) is false. This is usually called a “vacuous truth”. Therefore, for an empty set the &lt;script type=&quot;math/tex&quot;&gt; f\left(S,p\right)&lt;/script&gt; function should always evaluate to 1.&lt;/p&gt;
+
+&lt;p&gt;My misunderstanding was that I should equally well be able  to declare that I need to demonstrate I cannot find any element in &lt;script type=&quot;math/tex&quot;&gt; S&lt;/script&gt; for which &lt;script type=&quot;math/tex&quot;&gt; p(x)&lt;/script&gt; is 1, and thus conclude that the natural choice would be for &lt;script type=&quot;math/tex&quot;&gt; f\left(S,p\right)&lt;/script&gt; to always be 0 on an empty set. So it seemed to me like this reasoning did not lead to any well-defined conclusion.&lt;/p&gt;
+
+&lt;p&gt;What I proposed was an alternative reasoning by generalizing to continuity on sets of real numbers: Consider the set &lt;script type=&quot;math/tex&quot;&gt; s_{\epsilon} = \left(0,\epsilon\right)&lt;/script&gt; with &lt;script type=&quot;math/tex&quot;&gt; \epsilon \neq 0&lt;/script&gt;, which is just an open-ended interval on the real line. Then, I can consider a generalization of the &lt;script type=&quot;math/tex&quot;&gt; f\left(S,p\right)&lt;/script&gt; function which accepts sets containing real numbers as inputs. With my choice of interval &lt;script type=&quot;math/tex&quot;&gt; s_{\epsilon}&lt;/script&gt;, the limit &lt;script type=&quot;math/tex&quot;&gt; \lim_{\epsilon\rightarrow0}s_{\epsilon} = \emptyset&lt;/script&gt; (the empty set). At the same time, for any &lt;script type=&quot;math/tex&quot;&gt; s_{\epsilon} \neq 0&lt;/script&gt;, it is true that &lt;script type=&quot;math/tex&quot;&gt; f\left(s_{\epsilon},0\right) = 0&lt;/script&gt;, and consequently &lt;script type=&quot;math/tex&quot;&gt; \lim_{\epsilon\rightarrow0} f\left(s_{\epsilon},0\right) = 0&lt;/script&gt;. Thus, if I want &lt;script type=&quot;math/tex&quot;&gt; f\left(S,p\right)&lt;/script&gt; to be “continuous” in the sense that &lt;script type=&quot;math/tex&quot;&gt; \lim_{\epsilon\rightarrow0} f\left(s_{\epsilon},0\right) = f\left(\lim_{\epsilon\rightarrow0}s_{\epsilon},0\right)&lt;/script&gt;, then I must define &lt;script type=&quot;math/tex&quot;&gt; f\left(\emptyset,0\right) \equiv 0&lt;/script&gt;. Likewise, I must define &lt;script type=&quot;math/tex&quot;&gt; f\left(\emptyset,1\right) \equiv 1&lt;/script&gt;.&lt;/p&gt;
+
+&lt;p&gt;Apparently, this reasoning is not satisfactory. Aesthetically appealing as it is, continuity should not be invoked when thinking about the empty set (one could come up with perfectly valid sets which make the “for all” statement discontinuous in the limit of an empty set). Instead, the proper way to think of the truth value of “for all” on the empty set, is only via the converse “exists” statement.&lt;/p&gt;
+
+&lt;p&gt;At the end of all this, I am amazed by the simplicity of evaluating truths in vacuum (vacuous truths): consider the statement p(x) = (element x does not exist). It is easy to say “for all x in the empty set, the element x does not exist”, for there exists no element x in the empty set for which the element x exists. But let’s not stop there. How about p(x) = (element x exists). Then “for all x in the empty set, the element x exists”, since there exists no element in the empty set for which the element x does not exist. &lt;a href=&quot;http://oligotropos.wordpress.com/2014/10/02/why-all-cs-majors-should-be-required-to-take-a-course-on-real-analysis/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Thu, 02 Oct 2014 03:00:00 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/10/02/Life-in-vacuum.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/10/02/Life-in-vacuum.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Picking a doctor!</title>
+        <description>&lt;p&gt;After the two previous posts discussing the collection and cleaning up of doctor ratings data, it is time for the fun part: 
+Picking the best rated doctor. The poor man’s approach is: Given the data, average all the ratings for each doctor, and 
+whoever has the largest average rating wins. But the question we really want to answer is: Given the data, which doctor has 
+the &lt;em&gt;highest probability&lt;/em&gt; of having a high score, say above 4.8 out of 5?&lt;/p&gt;
+
+&lt;p&gt;More concretely, consider the following example:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;* Doctor A: 4 out of 4 ratings. Average rating: 4.5/5. Variance of ratings: 0.5/5.
+* Doctor B: 4 out of 4 ratings. Average rating: 4.6/5. Variance of ratings: 0.3/5.
+* Doctor C: 3 out of 4 ratings. Average rating: 4.5/5. Variance of ratings: 0.5/5.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It is not clear that one doctor is better than the others: the mean rating and standard deviation do not capture all of the 
+information, and missing values complicate things even more. What we need is a &lt;em&gt;single measure&lt;/em&gt; of quality for each doctor. 
+We also want to be able to estimate the &lt;em&gt;probability distributions&lt;/em&gt; of the doctors’ quality measures, given the entire ensemble 
+of ratings that we have in our possession. In what follows, I am using Principal Components Analysis (PCA) to derive a unique 
+rating parameter from the data set, and boostraping to estimate the distribution of ratings for each doctor.&lt;/p&gt;
+
+&lt;p&gt;Let me try to break this down, in case it was too technical: You can think of PCA as a way to draw a ‘best fit’ line (or plane in 
+higher dimensions) through a cloud of data, by treating all the variables on equal footing (as opposed to least squares linear 
+regression, which singles-out one of the vartiables to find the best fit). PCA allows me to compact my data from a $P$-dimensional space to lower dimensions, by picking those combinations of parameters which explain the maximal amount of variance in the data. In plain English: with PCA I can find a single linear combination of the four ratings (not necessarily the mean) which explains as much of the variance in the data as can be explained using a single parameter.  Moreover, 
+&lt;a href=&quot;http://en.wikipedia.org/wiki/Principal_component_analysis#PCA_and_information_theory&quot;&gt;under certain assumptions&lt;/a&gt;, the 
+transformation is optimal in terms of compacting the information in the data to as few parameters as possible: If I keep the first component, I am guaranteed to have the maximum amount of information that I could have in a single parameter, given my observations.&lt;/p&gt;
+
+&lt;p&gt;So, here is the strategy: I will perform PCA on the data and keep only the component which explains the maximum amount of variance in the data. Let’s call this component the ‘PCA score’. PCA is not suited to data with missing values, so I will use one of the data imputation methods I developed before. I do not want to throw  away data, but also do not want to introduce too much bias. So, I will use stochastic mean imputation, and repeat the analysis many times to acquire good statistics. The randomness I introduce this way, will influence all PCA scores in a way which reflects the missing information in the data. This way, the PCA score of each doctor will become a probability distribution, based on which I can then select the best doctors.&lt;/p&gt;
+
+&lt;p&gt;There are two more caveats here: First, by introducing normally distributed random ratings to impute the missing values, I am making an implicit assumption about the probability ditributions of missing ratings. Second, the algorithm described above, will be biased toward doctors who have all four ratings and have high scores in all four. For example, doctors with equally high, or higher ratings in only three websites will be less favored by the stochastic imputation step. To circumvent this, before the imputation I will add a step of randomly removing one out of four ratings from all doctors who have all four ratings. In summary, here is the algorithm I will use:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;	get rating data
+	repeat N times
+	{
+	randomly remove 1 out of 4 ratings where all 4 ratings are present
+	do mean stochastic imputation on data
+	do PCA on imputed data
+	save PCA score for all doctors for this iteration
+	}
+	analyse the PCA score distributions from the N saved iterations
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;At the end of this process, I will have a &lt;em&gt;distribution&lt;/em&gt; of PCA scores for each doctor. Then, I can use several different criteria to rate the doctors based  on the PCA score distributions.&lt;/p&gt;
+
+&lt;p&gt;The first step is to check the implementation of a single iteration of the PCA algorithm. Here I perform PCA on a single realization of the data after stochastic mean imputation. I have implemented the PCA transformation in such a way that my PCA score is in the range between 0 and 1. The first thing is to check how the PCA score compares to the mean rating.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-14-picking-doctor/pca_vs_mean.png&quot; alt=&quot;pca score vs mean&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;It is reassuring to see that the trend is linear. We also see that the  relation is not purely monotonic. This reflects the difference between PCA and the mean, which I already alluded to.&lt;/p&gt;
+
+&lt;p&gt;The next thing to check is how the distribution of PCA scores looks for this particular realization of stochastic mean imputation.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-14-picking-doctor/single_pca_histogram.png&quot; alt=&quot;pca score histogram&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The distribution looks similar to the ratings histograms from individual websites, which I showed in my previous posts. Of course, this is one particular draw from a distribution of PCA ratings.&lt;/p&gt;
+
+&lt;p&gt;This all looks as expected, and it is time to run the bootstrapping analysis on the ratings dataset. I ran the bootstrapping analysis twice. The first time, I did what I would call “single bootstrap”. I only did stochastic mean imputation on the dataset, but I left all the doctors with four ratings untouched. As I said in the introduction, this adds bias in favour of the doctors who have all four ratings. That’s what motivated the ‘double boot-strapping’ procedure: I will remove ratings at random to remove this bias (let’s call this exputation). The question is, why stop at 3 ratings. You could be biased against 2 and 1 rating as well. My short answer to this is: I made this choice partially on intuitive, partially on practical grounds (e.g. cpu time). In general, one should try more sophisticated exputation/imputation schemes.&lt;/p&gt;
+
+&lt;p&gt;To highlight the difference between single and double bootstrap, I am plotting the histograms of PCA scores for two doctors, one of whom having all four ratings and the other one having only two ratings in the original dataset. Here are the histograms (Doctor 7 in this example had 2 missing ratings, while Doctor 6 had 0 missing ratings):&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-14-picking-doctor/single_vs_double_bootstrap.png&quot; alt=&quot;single vs double bootstrapping&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The histograms give me a hint that the double bootstrap analysis was a step in the right direction. I am now getting more similar score distributions between doctors with missing ratings, and those who had no missing ratings, so I can be more confident that I am comparing different doctors on the same footing.&lt;/p&gt;
+
+&lt;p&gt;If you have accepted what I’ve done so far, we are finally at the last turn of the road! The final step is to decide who are the best rated doctors based on their probability of having a score above a certain value. I set the score threshold to different thresholds between 0.99 and 0.80, and sum up the estimated probabilities that the PCA score is above a certain threshold. Here is an example output:&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;name&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P(score&amp;gt; 0.99)&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P(score&amp;gt; 0.95)&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P(score&amp;gt; 0.90)&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P(score&amp;gt; 0.85)&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P(score&amp;gt; 0.80)&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#404&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.627&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.976&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#424&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.649&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.971&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#310&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.655&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.970&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#93&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.642&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.970&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#188&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.645&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.968&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#184&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.610&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.966&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#76&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.657&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.963&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#262&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.627&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.956&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#506&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.585&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.935&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;DOC#486&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.528&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0.921&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;And this is it, that’s what I wanted. Now I can decide what is a reasonable threshold, and choose the ‘best rated’ doctor.&lt;/p&gt;
+
+&lt;p&gt;To do this analysis I used the following Python libraries: Pandas, Scikit-Learn, Numpy, and Matplotlib. You can find the code on which this work was based on my Github repository as an &lt;a href=&quot;https://github.com/nikos-daniilidis/find-md/blob/master/find_me_a_doc_pca-score.ipynb&quot;&gt;IPython notebook&lt;/a&gt;, and converted to &lt;a href=&quot;http://nikos-daniilidis.github.io/find-md/find_me_a_doc_pca-score.html&quot;&gt;html&lt;/a&gt;. &lt;a href=&quot;http://oligotropos.wordpress.com/2014/07/14/picking-a-doctor/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+
+</description>
+        <pubDate>Mon, 14 Jul 2014 10:54:02 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/07/14/picking-a-doctor.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/07/14/picking-a-doctor.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Data imputation: the brute, the stochastic, and the aggressive</title>
+        <description>&lt;p&gt;I am having a second look at doctor ratings in the SF bay area, and using it as a platform to develop some methods for problems of this kind. This time, I collected more data, and I implemented a few additional methods to deal with missing data.  This was necessary before I could build algorithms working on the doctor ratings data, as the existing Pandas capabilities for dealing with missing data do not provide many options.&lt;/p&gt;
+
+&lt;p&gt;I used two methods of data imputation (filling in missing data) for the doctor ratings. The crude method was: just drop all doctors who have any missing ratings. Obviously, this ends up in a massive loss of data, and can add some bias. The second method I tried was mean imputation: for each doctor fill-in the missing ratings by using the mean of the existing ratings. This is still fairly crude and could also add some bias. A slight improvement is possible by adding a stochastic element: whenever there are missing values, generate the missing values as random draws from a normal distribution with the mean and the standard deviation of the existing values. I have implemented these two methods in functions which work on Pandas DataFrames, although the former method (let’s call it aggressive imputation) is a one-liner in Pandas.&lt;/p&gt;
+
+&lt;p&gt;The first thing I did was collect more data, bringing the total number of doctors to 930, of which ratings are available for 750. Now I can plot the same combination of scatter plots and histograms as I did on the previous blog post.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-12-imputation/new-data-raw.png&quot; alt=&quot;raw data&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The histograms and &lt;script type=&quot;math/tex&quot;&gt; R^2&lt;/script&gt; values are slightly different, but a lot of scatter remains. Most of the variance in the data cannot be explained by the simple regression models of the form &lt;script type=&quot;math/tex&quot;&gt; Y = \beta_0+\beta_1 X&lt;/script&gt; which I use here.&lt;/p&gt;
+
+&lt;p&gt;After aggressive imputation, I am left with 126 out of 930 doctors. However, the remaining doctors have all four ratings from the websites, which can make it easy to move ahead with data analysis. I proceed to inspect the data after aggressive imputation:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-12-imputation/new-data-aggressive-imput.png&quot; alt=&quot;aggressive imputation&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The level  of correlation between different ratings did not increase after getting rid of the missing values. This is evident from the &lt;script type=&quot;math/tex&quot;&gt; R^2&lt;/script&gt; values for the linear fit models, but also visually from the amount of scatter in the scatter plots.&lt;/p&gt;
+
+&lt;p&gt;I implemented two methods of mean imputation. “Brute” mean imputation replaces missing values with the means of existing corresponding values. “Stochastic” mean imputation replaces the missing values with random draws from a normal distribution with the mean and standard deviation of the existing corresponding values. Here I have a look at how they perform. Brute imputation results in this visualization:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-12-imputation/new-data-brute-mean-imput.png&quot; alt=&quot;mean imputation&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The first thing to note is that I now get a large density of points near and along the diagonals of the scatter plots. This is very promising! It means that, although the ratings from individual websites show significant scatter when compared one by one, the aggregate picture which emerges by taking all ratings into account shows a large degree of correlation. A second way to see this is to look at the &lt;script type=&quot;math/tex&quot;&gt;R^2&lt;/script&gt; coefficients in the linear fits. The values have improved significantly over those I was getting in the original data without imputation, but also over the values I was  getting after aggressive imputation.&lt;/p&gt;
+
+&lt;p&gt;The large density of points on the diagonals of the scatter plots reveals a limitation of the “brute” mean imputation method. Here’s why: If I am missing two out of four ratings for a particular doctor, then I will fill their values with the same number (the mean of the existing ones). When I make a scatter-plot, these values will appear on the diagonal, creating an illusion of perfect correlation - a kind of false optimism of the method. This is why stochastic mean imputation is a good idea: By adding a random element to the imputed values, I reduce this fictitious correlation and counter balance the false optimism. In terms of fitting models to the imputed data, we can expect that adding the stochastic element will reduce  the amount of bias we introduce because  of the fictitious correlations. Here  is how the stochastic method looks:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-07-12-imputation/new-data-stoch-mean-imput.png&quot; alt=&quot;stochastic imputation&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;As you can see, I am now getting a lower degree of correlation than with the brute method. This is clear from the &lt;script type=&quot;math/tex&quot;&gt; R^2&lt;/script&gt; values in the linear fits, which are now 10-30% lower than they were after the “brute” mean imputation. This is a  good thing! It means we have partially solved the problem of over-optimism of our model.&lt;/p&gt;
+
+&lt;p&gt;One last thing to note, is that the linear regression model I am using to fit a line through the scatterplots suffers from “regression toward the mean”. In other words, linear regression tends to give predictions which are closer to the mean than to the extremes. It is a conservative model! The  most obvious symptom of this is when your reaction to looking at a fit is: “this fit is wrong, it is way too flat”. Looking at the scatter plots in both data sets with mean imputation, the linear fits certainly have this look. It is not a problem of the algorithm, but rather a feature  of the linear regression model that you are looking at.&lt;/p&gt;
+
+&lt;p&gt;Now that I have a “complete” data set, I am taking a next step into multiple linear regression. This will allow me to evaluate which of my ratings matter most, and whether I would be able to ignore some in designing a doctor-choosing algorithm.&lt;/p&gt;
+
+&lt;p&gt;In this work I used the Python Pandas and NumPy libraries. You can find the code on my GitHub repository, as &lt;a href=&quot;https://github.com/nikos-daniilidis/find-md/blob/master/find_me_a_doc_imputation.ipynb&quot;&gt;IPython notebook&lt;/a&gt;, as well as converted to &lt;a href=&quot;nikos-daniilidis.github.io/find-md/find_me_a_doc_imputation.html&quot;&gt;html&lt;/a&gt;. &lt;a href=&quot;http://oligotropos.wordpress.com/2014/07/12/ihmo-continued-the-brute-the-stochastic-and-the-aggressive/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+
+</description>
+        <pubDate>Sat, 12 Jul 2014 03:00:00 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/07/12/Data-imputation:-the-brute-the-stochastic-and-the-aggressive.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/07/12/Data-imputation:-the-brute-the-stochastic-and-the-aggressive.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Staying healthy, staying sane (iHMO)</title>
+        <description>&lt;p&gt;Last Friday, I needed a doctor and was trying to get my HMO plan set up (I’m fine now). I soon found out that my insurance company was determined to stand up to the bad reputation that HMO insurance providers have. Besides poor and non-transparent over-the-phone customer service, on my provider’s website only 5 out of 300 doctors had any rating at all. So, I decided to go online and find myself a decent primary care doctor. I did not feel like typing in the names of 300 doctors on doctor rating websites, so I programmed my computer to do that. What follows is an outline of the (interesting) results.&lt;/p&gt;
+
+&lt;p&gt;First, a word of introduction for those who are not lucky enough to live in the country with the best healthcare system in the world. Health insurance plans in this country fall under two categories. They are either HMO plans or PPO plans. Roughly speaking, with an HMO plan you have lower co-payments and healthcare costs, but you are extremely restricted on the doctors you are allowed to see. Most of your health issues have to go through a specific doctor, your ‘primary care’ doctor. If you get a hurting foot, you have to go through your primary care doctor, who will send you to the foot doctor. With a PPO plan you have more freedom, you can see the foot doctor directly, as long as they are within a network of allowed providers. Nationwide, 23.3% of the population holds some kind of HMO health insurance. For the state of California, the percentage is higher: 43.5% of the ppopulaion has HMO coverage (&lt;a href=&quot;http://kff.org/other/state-indicator/hmo-penetration-rate/&quot;&gt;source&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;Now, HMO plans have a reputation for not trying to give you the best possible healthcare. That’s why it matters to carefully choose your primary care doctor. Thankfully there are websites where you can go and find doctor ratings. The problem with these is that they are often involved in controversial cases of rigged ratings (&lt;a href=&quot;http://www.eastbayexpress.com/gyrobase/yelp_and_the_business_of_extortion_2_0/Content?oid=927491&amp;amp;page=1&quot;&gt;e.g.&lt;/a&gt;). However, a lot of people visit and rate in those websites. So, hopefully with large numbers of visitors and ratings you can have some faith in the results (or can you?) Here is representative traffic for those websites, in visitors per month:&lt;/p&gt;
+
+&lt;p&gt;Vitals.com             4.35 million&lt;/p&gt;
+
+&lt;p&gt;Healthgrades.com       4.28 million&lt;/p&gt;
+
+&lt;p&gt;Wellness.com           2.55 million&lt;/p&gt;
+
+&lt;p&gt;UCompareHealthCare.com 1.92 million&lt;/p&gt;
+
+&lt;p&gt;RateMds.com              732,943&lt;/p&gt;
+
+&lt;p&gt;(&lt;a href=&quot;http://www.slideshare.net/reviewconcierge/remove-review-from-the-top-5-healthcare-directories&quot;&gt;source&lt;/a&gt;)&lt;/p&gt;
+
+&lt;p&gt;Now, back to my problem: I tried to find out what ratings I can trust (and which doctor I should choose) for the list of doctors that my insurer gave me as possible primary care providers. From the health insurance website, I downloaded as pdf the list of doctors I am eligible to see, and converted the pdf to a text file. I ended up with a list of 286 doctor names and addresses. Then I wrote some python scripts which retrieved for me the average ratings of these 286 doctors from four websites: vitals.com, healthgrades.com, ucomphealthcare.com, and ratemds.com. Then I organized and plotted the ratings, as I show below.&lt;/p&gt;
+
+&lt;p&gt;I am sharing the code which I used to plot and analyze the doctor ratings in the linked &lt;a href=&quot;https://github.com/nikos-daniilidis/find-md/blob/master/find_me_a_doc_nonames.ipynb&quot;&gt;IPython notebook&lt;/a&gt; (and converted to &lt;a href=&quot;http://nikos-daniilidis.github.io/find-md/find_me_a_doc_nonames.html&quot;&gt;html&lt;/a&gt;). I am also sharing the dataset of doctor ratings, with the doctor names removed (on same github directory as the notebook). I am not including the part of the code which allows retrieving the ratings from the rating websites (even though it amounted to 80% of the effort to produce the results), since this code could easily be abused. If you need the application for yourself, email me and we’ll see what we can do.&lt;/p&gt;
+
+&lt;p&gt;The following plot shows a summary of distributions of doctor ratings in the four websites, as well as the correlations between ratings of the same doctor between different websites.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-25-staying-healthy-staying-sane/scatter_matrix_94010_5mi_94709_10mi.png&quot; alt=&quot;raw ratings data&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Well, what have we here? The only thing that’s clear is that the data is all over the place! But first, what exactly am I plotting?&lt;/p&gt;
+
+&lt;p&gt;Along the diagonal, I show the histogram of ratings for each of the four websites, i.e. the histogram for healthgrade.com, the histogram for ratemds.com, the histogram for ucomphealthcare.com, and the one for vitals.com. The maximum rating for the first three is five stars, while vitals.com goes only to four stars (that’s a minor point). Note that the shape of the histograms is different, i.e. different websites show different distributions (for my small sample). Three out of four seem to have inflated ratings, and only ratemds.com seems to have the bell-shaped form I would expect. Why do I expect a bell shape? Because it is more likely that some doctors will be excellent and some will be bad, but most doctors will be not particularly good or bad -falling somewhere in the middle. If all doctors in my rating pool are outstanding, I either have the problem that my doctor pool has been truncated to leave out the better ones (so that I am sampling the lower half of a bell curve), or I have a problem of ‘grade inflation’, which somehow follows all these doctors even now that they are out of medical school. Which of the two it is, I do not know. I will leave it up to you to speculate which of the four websites most likely suffers from erroneous ratings for doctors who refused to offer reputation management concessions…&lt;/p&gt;
+
+&lt;p&gt;Moving on to cross-correlations, we see that in the correlation of ratings between different websites the world falls apart! This is what you see in the curves off the diagonal, for exammple the second plot in the first row shows the ratings in ratemds.com vesrus the ratings in healthgrade.com. Each point in these off-diagonal plots represents a doctor. All points are identical and semitransparent, which means that darker blue dots reveal a high concentration of doctors in a particular region (they are multiple doctors with nearly overlapping ratings). Now, if there was good correlation for the ratings of the same doctor in different websites, I would expect the points to fall on a straight line with some scatter. That’s not what I see! To quantify how much correlation there is, I try to fit a line through the data. This is the bold black line that you see in each of the curves. Around each bold line I draw, as a grey band, the 95% confidence interval for my linear fit. This band represents the range of values where 95% of my data should fall, if the linear fit is a good description of my data. Are the linear fits good descriptions? No! You can get an idea of how bad they are, by looking at the &lt;script type=&quot;math/tex&quot;&gt; R^2&lt;/script&gt; value which I show in the title of each plot. You can take this value as giving you the fraction of variability in the data which is described by the linear model. Some pairs of websites give extremely bad results, with &lt;script type=&quot;math/tex&quot;&gt; R^2&lt;/script&gt; as low as 0.004 for the ratings between ucomphealthcare.com and healthgrade.com. The biggest degree of linear correlation, with &lt;script type=&quot;math/tex&quot;&gt; R^2&lt;/script&gt; around 0.25, is between ucomphealthcare.com and vitals.com.&lt;/p&gt;
+
+&lt;p&gt;To finish on a positive note, not all is bleak. We cannot cross calibrate the ratings, but a closer look at the plots reveals that while some low-rated doctors show a lot of scatter in their ratings , high-rated doctors tend to be highly rated in more than one website. For example, there are concentrations of dark points at the high rating regions in vitals.com, ratemds.com, and ucomphealthcare.com. This allows me to pick a good doctor with relatively high confidence. To do this, I have to pick someone who rates well in all of the available websites, say a doctor with the maximum average rating. This is not the most mathematically proper decision procedure, but it allows me to at least choose a primary care physician before I fully develop the proper decision algorithm.&lt;/p&gt;
+
+&lt;p&gt;I might follow up on this post with some more work on making sense out of this data. One idea to make use of all the ratings, is to do what is called principal components analysis (PCA) on the data. Principal components analysis is a standard trick for situations where you have (possibly noisy) data in a high-dimensional space, and you want to find those combinations of dimensions which contain most of the information which is hidden in your data. Then you can keep a few parameters (which are linear combinations of all dimensions) which contain most of the information in your data, and not worry about the rest. In other words PCA would allow me to generate a “hypergrade”, one single parameter which tells me who is the best doctor, givem the data at hand. The reason I am not doing this right now is that PCA will not work well with situations where some data is missing, and Python does not provide an implementation of the methods which are used to solve this problem. I might return to this in about a week’s time, unless I get caught up with some of my other projects in javascript, R, or Julia.&lt;/p&gt;
+
+&lt;p&gt;To convert the pdf to text for this work I used &lt;a href=&quot;http://www.unixuser.org/~euske/python/pdfminer/&quot;&gt;PDFMiner&lt;/a&gt;, an awesome Python package. To get the data from the rating websites, I relied heavily on Python &lt;a href=&quot;http://docs.python-requests.org/en/latest/&quot;&gt;requests&lt;/a&gt;, and to parse the information from the data I made heavy use of the &lt;a href=&quot;https://docs.python.org/2/library/re.html&quot;&gt;re&lt;/a&gt; module and Python &lt;a href=&quot;http://www.clips.ua.ac.be/pattern&quot;&gt;pattern&lt;/a&gt;. Finally, the part of the code that you see here uses &lt;a href=&quot;http://pandas.pydata.org/&quot;&gt;pandas&lt;/a&gt;, &lt;a href=&quot;http://www.numpy.org/&quot;&gt;numpy&lt;/a&gt;, and &lt;a href=&quot;http://matplotlib.org/&quot;&gt;matplotlib&lt;/a&gt;. &lt;a href=&quot;http://oligotropos.wordpress.com/2014/06/25/staying-healthy-staying-sane/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Wed, 25 Jun 2014 03:00:00 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/06/25/Staying-healthy,-staying-sane-(iHMO).html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/06/25/Staying-healthy,-staying-sane-(iHMO).html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Clustering of text: It is not flat!</title>
+        <description>&lt;p&gt;This is going to be a technical post. I am looking into the behaviour of clustering analysis for text entries. The reason is that I tried putting in clusters the title/authors-list data for the Physical Review archive and was unpleasantly surprised. I went in with high expectations: The titles in science publications have lots of condensed meaning to them, and the authors list provides one additional hint to nail down which category an article belongs to. To my surprise, I found that a simple clustering algorithm (k-means) was putting 95% of my data in the same cluster.&lt;/p&gt;
+
+&lt;p&gt;Naturally, to me this result was the equivalent of what the picture below must have been to the members of the &lt;a href=&quot;http://theflatearthsociety.org/cms/&quot;&gt;flat earth society&lt;/a&gt;: I thought “Nonsense! There must be a work around this!”. Below are the efforts. Thankfully in blogging, unlike in academia, you are allowed to publish negative results ;-)&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-15-text-k-means/first-ever-earth-from-space.jpg&quot; alt=&quot;first ever picture of earth from space&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;First ever photograph of earth from space (credits: NASA)&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;So, here is a statement of the problem: we have a bunch of text entries (a “corpus”) which belong to a number of different categories, say 5000 text entries from 10 categories. How can we tell a computer to sort them out? One way is declare that entries containing the same terms belong to the same cluster. In order to allow our machine to decide that, we create a collection of all the terms, numbered from 1 to N (yes, I still count form 1!). Now for each text entry, we count how  many times each term appears, and in this way convert the entry to a vector in the N-dimensional space of all terms appearing in the text corpus. Once we have done that, we can decide how much two text entries are related, based on their ‘distance’ in this N-dimensional space. Thus, we can use our favourite distance metric and clustering algorithm to split the text entries into categories. Simple, right?&lt;/p&gt;
+
+&lt;p&gt;There are some caveats about getting rid of very common and very uncommon words and about keeping the stems of words (e.g. “spher” for “sphere” and for “spherical”) which I will not go into here. All these details can be taken care of using standard tools and they result in increased signal to noise. Sadly, after all this is said and done, two pretty hairy issues remain:&lt;/p&gt;
+
+&lt;p&gt;The first has to do with the dimensionality of the vector space in which we need to cluster. The space is huge (for a text corpus of 5000 paragraph-long samples we can easily end up with 5000 dimensions i.e. 5000 distinct terms). Now each vector among our samples has much lower dimension, probably 10-40 terms, let’s say it typically extends to 20 dimensions. Clearly, we are severely undersampling the vector space. For example the probability that two 20-dimensional vectors randomly picked from a 5000 dimensional space will have any dimensions in common is around 8% (thanks to Shirley Yap for solving this problem in 3 minutes and sparing me 2 hours of adding factorials!).&lt;/p&gt;
+
+&lt;p&gt;The other issue has to do with the shape of the clusters corresponding to each category: They will most likely not be convex. In fact I am absolutely certain I will never be able to understand all the ways in which 5000-dimensional clusters can be oddly shaped.&lt;/p&gt;
+
+&lt;p&gt;The simplest clustering algorithm there is (k-means) can offer some insights. k-means is extremely simple. It tries to categorize sample vectors into k clusters, with k fixed. It starts by randomly selecting k cluster centers (or “centroids”), and places each data point in one cluster, based on which centroid is the closest to it. Then it recalculates the cluster centers as the centers of mass of the newly formed clusters, and keeps repeating the process of assigning samples to clusters and repositioning the centers until the center positions converge.&lt;/p&gt;
+
+&lt;p&gt;Instead of working with the Physical Review data, where things failed badly, let’s do the clustering analysis on a dataset where the text entries are slightly longer. We chose the “20 newsgroups-18828” data set (&lt;a href=&quot;http://mlcomp.org/datasets&quot;&gt;from MLcomp.org&lt;/a&gt;), and carry out the clustering analysis on the entries found in 7 categories of this data set. To categorize the data into clusters, we run k-means with 7 clusters, and assign to each of the clusters the label of the majority of its members. The result is that an unimpressive 45% of the data end up being categorized with the wrong label. This is much better that the 86% we would expect with random group assignments, but we were hoping for more.&lt;/p&gt;
+
+&lt;p&gt;The following figure can give us an idea why: In this plot we see the probability that a randomly chosen text entry will fall into a given cluster. Darker blue means higher probability. Some of the clusters are well separated from all but one groups, for example “sci.space” corresponds pretty nicely to cluster #1. But we also see that some clusters, most notably #2 get a sizeable fraction of entries from all categories. We also see that most of the confusion is around computer hardware and graphics issues.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-15-text-k-means/clustering-7x7.png&quot; alt=&quot;confusion matrix for text clustering&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Probability of assigning members of a given group to one of the clusters.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Is there a way around this? Yes, partially. We can ask k-means to use more clusters, and hope that it will be able to capture more of the fine details in the topics we are trying to differentiate. Let’s see how this goes. We push the number of clusters up to 1000, and assign each cluster to one of the seven groups according to the category of the majority of its members. We then look a the fraction of text entries which do not get properly classified in this process. The result is in the following figure (error-bars represent the standard deviation in classification error in 10 runs of the algorithm).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-15-text-k-means/error-vs-clusters-l2-tf-idf-no-label.png&quot; alt=&quot;error vs number of clusters&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Classification error vs number of clusters&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;What an interesting figure! We see a moderate improvement in the accuracy of the classification, but at the expense of an immense increase in the number of clusters. How far can we push this approach? The extreme limit is to make the number of clusters equal to the number of text entries, around 5000 for our current example. In this limit, where on average we will have one cluster per text entry, does it make sense to talk about clustering any more? In a way, it does. The increase in number of clusters is reminiscent of what is called hierarchical clustering, where small clusters are joined into larger ones to form a hierarchy. This is essentially what we do here, where we start with many clusters and join them to form a few groups. Word on the street (i.e. on &lt;a href=&quot;http://stats.stackexchange.com/&quot;&gt;http://stats.stackexchange.com/&lt;/a&gt;) has it that hierarchical clustering is preferable  to k-means for text data, which agrees with the pattern we see here.&lt;/p&gt;
+
+&lt;p&gt;So increasing the number of clusters makes sense from an intuitive ‘hierarchy of content’ point of view. There is also a geometric way to understand why more clusters help with k-means. By its construction, k-means works with convex clusters, those blobs in the feature space which have no protrusions, no indentations and no cavities. However, the clusters corresponding to the groups in our data do not necessarily have this property. Thus, by allowing for a large number of clusters which we then join together, we can conform to non-convex shapes. Interestingly, although we are using up to 1000 clusters we do not seem to have the problem of “overfitting”, i.e. making a prediction which follows every random detail in our data set, but lacks predictive power: To ensure this, we estimated the error in the above plot using a different set of data than the set which we used to label the clusters.&lt;/p&gt;
+
+&lt;p&gt;This geometric view might have something to do with an interesting aspect of the curve above. You might have noticed that the improvement in error with number of clusters is initially slow, but seems to change abruptly at around 500 clusters, where there is a kink in the curve. Below the kink, the  error drops with number of clusters as &lt;script type=&quot;math/tex&quot;&gt; err \sim n_{cl}^{-0.05}&lt;/script&gt;, while above it it drops as &lt;script type=&quot;math/tex&quot;&gt; err \sim n_{cl}^{-0.35}&lt;/script&gt;. On seeing this, the natural instinct of someone with my training is to shout “Phase Transition!”. But, perhaps, a more valid question to ask is whether this change in behavior has to do with the convexity properties of the shapes we are trying  to fit in 5000-dimensional space. I can’t promise I’ll do this, but well, hey, if you’re interested the code is available for you to build on and answer the question! To sum it all up, geometry matters. We can go back to our proverbial ‘Flat earth society’ member, and proclaim: It is flat! (depending on your coordinate system).&lt;/p&gt;
+
+&lt;p&gt;This exercise was based on the python &lt;a href=&quot;http://scikit-learn.org/stable/&quot;&gt;scikit-learn&lt;/a&gt; package. As usual, you can find the code for this post on github as &lt;a href=&quot;https://github.com/nikos-daniilidis/haystack/blob/master/clustering-performance-short.ipynb&quot;&gt;IPython notebook&lt;/a&gt; and converted to &lt;a href=&quot;http://nikos-daniilidis.github.io/haystack/clustering-performance-short.html&quot;&gt;html&lt;/a&gt;. &lt;a href=&quot;http://oligotropos.wordpress.com/2014/06/15/clustering-of-text-it-is-not-flat/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+
+</description>
+        <pubDate>Sun, 15 Jun 2014 03:00:00 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/06/15/Clustering-of-text:-It-is-not-flat!.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/06/15/Clustering-of-text:-It-is-not-flat!.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Tides and fads in the work of geeks: fashionable and hot areas in physics, 1970-2010</title>
+        <description>&lt;p&gt;The purpose here is to explore the historic evolution of trends in physics, as revealed by the Physical Review Letters archive. Physical Review Letters was introduced in 1958 by the American Physical Society as a means to publish results in a quick ‘n dirty manner. The idea was that some results are important enough to warrant a quick few-page report before a full length report could be written. Over the years, PRL became the standard for physics research, with every result which is supposed to be somehow worth learning about appearing in it (if not in Nature or Science). At the same time, the results which appeared in PRL were guaranteed high enough impact, that the full-length reports were often not published. I might return to the effects of impactism on modern research later, but now I am just thirsty to look at research trends.&lt;/p&gt;
+
+&lt;p&gt;The first thing to do, is plot the trends in the categories that were assigned by the Editors at the time of each article’s publication. To do this, I need to find out how many articles were published each year under every category. The category assignments have changed over time to follow the evolution of scientific ideas and fashions, so I had to figure out which are the ‘real’ categories behind the 24 different category titles appearing in the PRL archive. I will not show here the gory detail of how this is done, you can check it out in the IPython notebook &lt;a href=&quot;https://github.com/nikos-daniilidis/haystack/blob/master/parse-prl-xml.ipynb&quot;&gt;here&lt;/a&gt; (and &lt;a href=&quot;http://nikos-daniilidis.github.io/haystack/trends-prl-xml.html&quot;&gt;html&lt;/a&gt; if you want to look at it in your browser). With all this said and done, I came up with the following 8 categories:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;Plasmas, fluids, non-linear dynamics, classical optics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Atomic, molecular, and optical physics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Nuclear physics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Elementary particle physics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Condensed matter physics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Gravitation, astronomy, and astrophysics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;General physics&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Interdisciplinary physics&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Here is what the trends look like. I am plotting fraction of articles in a specific category for each year between 1970 and 2009.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-09-prl-1970-2010/all-prl-mess.png&quot; alt=&quot;all prl trends&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;By plotting everything together, as in the above image, not much is visible. The only clear trend is that condensed matter physics was becoming increasingly important until 1990, and then started to recede. It also appears like the loss of condensed matter physics was the gain of ‘General Physics’ and ‘Interdisciplinary Physics’. We can look at the data more closely.&lt;/p&gt;
+
+&lt;p&gt;First, I look at the areas which were lost in the clumped-up mess of the above figure. By plotting the trends in nuclear physics, particle physics, and astronomy related-fields, it is clear that the great gains in condensed matter physics between 1970 and 1990 come at the expense of nuclear physics and elementary particle physics. Meanwhile, astronomy and related areas are showing a slow but steady increase between 1975 and 1990. All three areas seem to hold their ground after 1990, but nuclear and elementary particle physics account for only 25% of the traffic they had back in 1970.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-09-prl-1970-2010/nuclear-high-energy-astro.png&quot; alt=&quot;nuclear, elementary particles, astro&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Next, I take a look at two areas which stood their ground throughout this period. AMO physics and the plasmas/fluids/non-linear effects area. Both of them seem remarkably -if not alarmingly- stable. There seems to be a depression in plasmas/fluids/etc. between 1973 and 1992. This is likely due to a ‘unlabeled scholar effect’, where areas of research do not clearly fall within any of the existing categories and end up appearing under ‘General physics’. During this period, the area of ‘General physics’ is showing increased activity -likely due to the fact that many groups which did not publish under ‘Fluids, Plasmas, and Electric Discharges’, nor under ‘Classical Phenomenology’ (the labels of the time) found a better fit under the ‘General physics’ label (I show the activity in ‘General physics’ in the graph after this one).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-09-prl-1970-2010/amo-plasma-fluids-non-linear.png&quot; alt=&quot;amo, plasma, fluids&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This example of  possibly mislabeled work, highlights the Editor’s classification dilemma: How to pick classification categories which will include most of the work without complains from the authors, but also last a long time. This is a hard problem, which explains why terms like General Physics persist, but occasionally acquire subclasses (‘quantum information’ and ‘biological physics’). Such subclasses will either take on a life of their own (once a field gets established), or perish.&lt;/p&gt;
+
+&lt;p&gt;Finally, I am going to try and answer who put that dent on condensed matter after 1990. The most likely candidates are the two categories  which typically contain the emerging research areas: ‘General physics’ and ‘Interdisciplinary physics’. Indeed, by looking at their historical trends, the increase in these two areas between 1990 and 2010 could account for most of the loss in condensed matter. The turnover can probably be traced to areas such as soft condensed matter, biophysics and quantum information. Interestingly, while AMO physics has also been a major player in quantum information, it has lost little of its market share during the same period. Perhaps biophysics was a bigger player until 2010, while quantum information really took off after 2010. It would be interesting to have a record of more recent years to see the evolution of these trends.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-09-prl-1970-2010/amo-condensed-matter-general-etc.png&quot; alt=&quot;amo, condensed matter, general&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;This has been an interesting exercise, and even taught me things I did not know about physics! At the same time, it gave a clear message for what I plan to do next, i.e. try to analyse clustering in physics publications. Preassigned categories have their limitations. When trying to look at clustering by category, hierarchical clustering algorithms might be the best option. I will need to use my best judgement in choosing/reducing among the existing category names, but always keep in mind that some of the labels were poorly chosen, or are simply too generic to show  much of a consistent pattern. For example, what internal consistency can I expect to find in areas like ‘General Physics’, which serve as containers for the emerging and un-categorizable areas of the day?&lt;/p&gt;
+
+&lt;p&gt;Most of the effort in producing this post went in parsing the xml files which contain the archive information for the 95000 pieces that appeared in PRL throughout this period. I had to write  my own specialized xml parsers to deal with badly formatted xml in the original data. You can check out how I did the analysis in this &lt;a href=&quot;http://nikos-daniilidis.github.io/haystack/trends-prl-xml.html&quot;&gt;html&lt;/a&gt; and the data parsing in this &lt;a href=&quot;http://nikos-daniilidis.github.io/haystack/parse-prl-xml.html&quot;&gt;html&lt;/a&gt;. As already mentioned, the data for this post were kindly provided by the APS. Obviously, any possible misrepresentation in the APS archive data is entirely the fault of the author. &lt;a href=&quot;http://oligotropos.wordpress.com/2014/06/09/tides-and-fads-in-the-work-of-geeks-fashionable-and-hot-areas-in-physics-1970-2010/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+
+</description>
+        <pubDate>Sun, 08 Jun 2014 17:00:01 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/06/08/prl-1970-2010.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/06/08/prl-1970-2010.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+      <item>
+        <title>Physics in war and peace: Historic trends in the Physical Review Archive</title>
+        <description>&lt;p&gt;This is going to be somewhat of a lengthy post, but I found doing the research behind it quite interesting. The subject is to identify historical trends in Physics research, based on the records of the Physical Review Archive. What I will write today comes from analysing a record of the titles of articles which appeared in the Physical Review from 1900 until 1970. The record consists of around 47000 article entries.&lt;/p&gt;
+
+&lt;p&gt;There are many cuts one can take through this data. Today I will only look at:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;* How many articles appeared each year?
+* How many unique terms appeared each year?
+* How did the typical probability of appearance  of a certain term a certain year vary?
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The questions are answered in the two following figures:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-01-phys-rev-1900-1970/numbers-vs-year-plot.png&quot; alt=&quot;number of publications&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2014-06-01-phys-rev-1900-1970/probabiliites-vs-year-plot.png&quot; alt=&quot;term probabilities&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;(note that in both figures the y axis shows the logarithm of the plotted quantity).&lt;/p&gt;
+
+&lt;p&gt;These two plots are fascinating! You can see the 20th century industrial and military history of the United States through the Physical Review publication titles. Moreover, you can get a glimpse of the trends within Physics itself.&lt;/p&gt;
+
+&lt;p&gt;Around the turn of the century there is a modest number of publications. Perhaps good publications were ending up in the prestigious European journals at the time. In addition, there is fairly small diversity in the topics which are covered in publications, some 0.5 % probability of a given term to appear in a randomly chosen title. In all, the statistics during this period is poor.&lt;/p&gt;
+
+&lt;p&gt;Around 1920, we seem to enter a period of intensified research. By looking at the terms which are the most popular during that time (in an upcoming post), it is pursuit of the early quantum physics which seems to prevail. The fashionable terms of the 20’s are related to spectroscopy, as compared to electricity and thermodynamics which seemed to prevail before 1920.&lt;/p&gt;
+
+&lt;p&gt;The boom of quantum physics continues until the 1930’s, when research seems to take a hit and stay flat in terms of quantity and diversity of publications. That’s no surprise, with the entire economy sinking, why would Physics research stay afloat? Interestingly, the New Deal fails to give research even a fraction of its previous momentum, although it does make for a minor uptick starting between 1933 and 1935.&lt;/p&gt;
+
+&lt;p&gt;The most striking feature in these plots is what happens between 1940 and 1950. The war years cause an incredible dip to the number of works that get published (research becoming war oriented and secret?). The same is true of the number of terms found in the published works, pointing to reduced diversity of the published works (although the hit to diversity is less severe than the hit to publishability). Both these trends can probably be traced to a ‘cut the fat’ approach to research during the war years.&lt;/p&gt;
+
+&lt;p&gt;What is very interesting, is that the dip in diversity and publishability happens before the beginning of the Manhattan project in 1942. Thus, we cannot blame all of this change to ‘nucular’ technology. There were a number of technologies which were very essential to the war effort, and very much related to Physics research: RF engineering to develop Radar technology and communications systems, missiles and ballistics, submarine technology, optics and camouflage, ‘War Metallurgy’ of steels, and the effects of ‘Impact and Explosion’ &lt;a href=&quot;http://www.loc.gov/rr/scitech/trs/trsosrd.html&quot;&gt;e.g.&lt;/a&gt;. Of course, we’re always tempted to think of the Manhattan project as the most decisive contribution of Physicists to the war effort. That is not an unjustified conclusion: After the end of this war, and of the Manhattan project, we became for the first time able to destroy our entire planet and most life on it within a matter of days!&lt;/p&gt;
+
+&lt;p&gt;At the end of the war, research diversity and publishability starts a fast recovery which continues until around 1950. After that, the 1950’s hit a mysterious period of stagnation, if not decline. Does this have to do with the unstable economic conditions of the 1950’s and the slump at the end of the decade? Unfortunately I am a Physicist, not an Economist to say . The issue is possibly more complex than a simplistic poor economy, poor research relation. During the 1950’s the economy was very much focused on making cars and electrical technology, areas where Physics innovation was not particularly useful, especially with the legacy of the war years. Indeed, the list of popular Physics research terms during the 1950’s revolves around nuclear and high-energy Physics.&lt;/p&gt;
+
+&lt;p&gt;Continuing on to the 1960’s, one understands why so many people are nostalgic about it! The stagnant trends in research turn around circa 1960. There is an upward trend in the number of Physics terms in use (a proxy of new ideas or diversity), but an even faster increase in the number of publications that appear each year. This probably has to do with the improvement of economic conditions in the 1960’s but partially also due to the birth of electronics. Information technology and microelectronics take off during this era, and Physicists are frontrunners in this race. It is the birth of ‘Solid State Physics’.&lt;/p&gt;
+
+&lt;p&gt;There is one strange aspect of the total number of publications and the total number of research-related terms in the sixties: It is the first time when the gap between the number of Physics terms and the number of articles closes (especially after 1967). Is this a merely a result of homogenizing and smoothing out of the terminology used in Physical Review publications, a result of changes in the diversity of papers appearing in the Physical Review, or does it signify a slowing down of the pace of expanding science to new realms -fewer new terms being introduced, while older terms are studied in more depth. Perhaps a good question for historians of science.&lt;/p&gt;
+
+&lt;p&gt;The  data for this post was kindly provided by the American Physical Society. To carry out the data analysis, I used the Python Pandas, Python Scikit-Learn, and Python NLTK libraries. You can see more about the technical details of the data analysis on the git repository for &lt;a href=&quot;https://github.com/nikos-daniilidis/haystack&quot;&gt;this project&lt;/a&gt; (notebook converted to &lt;a href=&quot;http://nikos-daniilidis.github.io/haystack/parse-pr-xml.html&quot;&gt;html&lt;/a&gt; is here). &lt;a href=&quot;http://oligotropos.wordpress.com/2014/06/01/physics-in-war-and-peace-historic-trends-in-the-physical-review-archive/&quot;&gt;Same post on wordpress&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Sun, 08 Jun 2014 17:00:01 -0700</pubDate>
+        <link>http://yourdomain.com/jekyll/update/2014/06/08/physe-rev-trends.html</link>
+        <guid isPermaLink="true">http://yourdomain.com/jekyll/update/2014/06/08/physe-rev-trends.html</guid>
+        
+        
+        <category>jekyll</category>
+        
+        <category>update</category>
+        
+      </item>
+    
+  </channel>
+</rss>
