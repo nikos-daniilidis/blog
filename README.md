@@ -97,8 +97,9 @@ That's it!
 | code | basseurl | url | links | works |
 |------|----------|-----|-------|-------|
 | 000  | blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | nothing |
+| 100  | /blog | http://nikos-daniilidis.github.io |  |  |
 | 101  | /blog | http://nikos-daniilidis.github.io/blog | http://nikos-daniilidis/github.io/blog/assets/all-pdf/daniilidis-resume.pdf | no links |
-| 111  | /blog/ | http://nikos-daniilidis.github.io/blog |  |  |
+| 111  | /blog/ | http://nikos-daniilidis.github.io/blog | http://nikos-daniilidis/github.io/blog/assets/all-pdf/daniilidis-resume.pdf | no links |
 
 
 
