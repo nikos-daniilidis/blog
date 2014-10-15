@@ -1,8 +1,8 @@
-#  This the repository for my blog.
+##  This the repository for my blog.
 
 Instead of writing about life in general, I will use the README to give an outline of how to arrive at a result similar to mine. 
 
-##Set up a github pages project page:
+### Set up a github pages project page:
 
 Following [this](http://www.thinkful.com/learn/a-guide-to-using-github-pages/start/new-project/project-page/) gh-pages tutorial
 
@@ -18,7 +18,7 @@ Following [this](http://www.thinkful.com/learn/a-guide-to-using-github-pages/sta
 		git push origin gh-pages
 _Done!_
 
-## Installing jekyll
+### Installing jekyll
 
 This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyll-2-ubuntu-14-04/)). Others are  possible.
 
@@ -52,7 +52,7 @@ This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyl
 
 		nikos@nikos-pseudomac:~/bin/github-pages/blog$ bundle install
 
-## After jekyll is installed, getting started
+### After jekyll is installed, getting started
 
 
 * Start new jekyll project in the location where your local gh-pages directory is
@@ -67,7 +67,7 @@ If a warning appears, remove all files from `/blog` and repeat (I had to remove 
 
 You should be seeing a decent page already.
 
-## Start formatting your blog
+### Start formatting your blog
 
 In `css/main.scss` select your css settings.
 
@@ -91,3 +91,11 @@ In `about.md`
 In all contents of `_posts`, `publications`, etc. make sure `assets` path rule is also followed.
 
 That's it!
+
+### Combinations of paths in `_config.yml`
+
+| basseurl | url | links | works |
+|----------|-----|-------|-------|
+| blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | nope |
+
+
