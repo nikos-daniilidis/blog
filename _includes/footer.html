@@ -7,8 +7,10 @@
     <div class="footer-col-wrapper">
       <div class="footer-col  footer-col-1">
         <ul class="contact-list">
-          <li>{{ site.title }}</li>
           <li><a href="mailto:{{ site.email }}">{{ site.email }}</a></li>
+          {% if site.linked_in %}
+          <li><a href="{{ site.linked_in }}">{{ site.linked_in }}</a></li>
+          {% endif %}
         </ul>
       </div>
 
