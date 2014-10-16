@@ -97,3 +97,10 @@ In all contents of `_posts`, `publications`, etc. make sure `assets` path rule i
 
 That's it. Happy blogging!
 
+### Set up custom domain names
+
+Two options here:
+
+	1. Create github user page, give it a custom domain, and have all project pages appear under it ([link](http://stackoverflow.com/questions/10685961/multiple-github-pages-and-custom-domains-via-dns))
+	2. Keep your project page, give it custom domain ([link](http://stackoverflow.com/questions/9082499/custom-domain-for-github-project-pages))
+
