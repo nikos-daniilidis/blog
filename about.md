@@ -4,7 +4,7 @@ title: About
 permalink: /about/
 ---
 
-[<img class="center" src="/assets/test.png" width="100%" />](/assets/test.png)
+[<img class="center" src="{{site.url}}/assets/test.png" width="100%" />]({{site.url}}/assets/test.png)
 
 I am a data scientist with a history in physics and electrical engineering ([resume here]({{ site.url }}/assets/all-pdf/daniilidis-resume.pdf)). This is my blog about science, technology, society and everything in-between. For the time being, it is a copy of my [wordpress blog](http://oligotropos.wordpress.com/). 
 
