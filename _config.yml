@@ -7,8 +7,8 @@ title: Nikos Daniilidis
 description: > # this means to ignore newlines until "baseurl:"
   A blog about science, technology, society, and everything in-between.
 
-baseurl:
-url: http://nikosd.me
+baseurl: #"/blog"
+url: "http://nikosd.me"
 
 email: nikos.daniilidis@gmail.com
 twitter_username: ndaniilidis
