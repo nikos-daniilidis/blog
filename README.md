@@ -1,6 +1,6 @@
 ##  This the repository for my blog.
 
-Instead of writing about life in general, I will use the README to give an outline of how to arrive at a result similar to mine. 
+I will use the README to give an outline of how to arrive at a result similar to mine. 
 
 ### Set up a github pages project page:
 
@@ -18,7 +18,7 @@ Following [this](http://www.thinkful.com/learn/a-guide-to-using-github-pages/sta
 		git push origin gh-pages
 _Done!_
 
-### Installing jekyll
+### Install jekyll
 
 This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyll-2-ubuntu-14-04/)). Others are  possible.
 
@@ -52,7 +52,7 @@ This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyl
 
 		nikos@nikos-pseudomac:~/bin/github-pages/blog$ bundle install
 
-### After jekyll is installed, getting started
+### After jekyll is installed, generate a standard canned blog
 
 
 * Start new jekyll project in the location where your local gh-pages directory is
@@ -61,7 +61,7 @@ This is one way that works ([source](http://michaelchelen.net/81fa/install-jekyl
 
 If a warning appears, remove all files from `/blog` and repeat (I had to remove `Gemfile, Gemfile.lock`)
 
-* Start serving an automatically generated blog on localhost:4000
+* Start serving an automatically generated blog on `localhost:4000`
 
 		jekyll serve --watch --baseurl ''
 
@@ -73,9 +73,14 @@ In `css/main.scss` select your css settings.
 
 In `_config.yml` 
 	* add github un-overridable defaults (lines 1-3)
-	* change preexisting site settings. Important is `baseurl: "/blog"`
+	* change preexisting site settings. e.g.
+
+		baseurl: "/blog"
+
+		url: "http://nikos-daniilidis.github.io" 
+
 	* add linked_in
-	* add names to exclude
+	* add file names to exclude
 
 In `_includes/footer.html`
 	* insert section about linked_in
@@ -86,23 +91,9 @@ In `_layout/default.html`
 
 In `about.md`
 	* insert your text
-	* make sure the links to all files have the `site.url` variable inserted: `[get the PDF]({{ site.url }}/assets/mydoc.pdf)`
+	* make sure the links to all files have the `site.baseurl` variable inserted: `[get the PDF]({{ site.baseurl }}/assets/mydoc.pdf)`
 
 In all contents of `_posts`, `publications`, etc. make sure `assets` path rule is also followed.
 
-That's it!
-
-### Combinations of paths in `_config.yml`
-
-| code | basseurl | url | page links | file links | broken |
-|------|----------|-----|------------|------------|--------|
-| 000  | blog | http://nikos-daniilidis.github.io | http://nikos-daniilidis.github.io/blog/blog/about/ | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf | all links |
-| 001  | blog | http://nikos-daniilidis.github.io/blog | http://nikos-daniilidis.github.io/blog/blog/about/ | http://nikos-daniilidis/github.io/assets/all-pdf/daniilidis-resume.pdf |
-| 010  | blog/ | http://nikos-daniilidis.github.io |  |  |  |
-| 011  | blog/ | http://nikos-daniilidis.github.io/blog |  |  |  |
-| 100  | /blog | http://nikos-daniilidis.github.io |  |  |  |
-| 101  | /blog | http://nikos-daniilidis.github.io/blog |  | http://nikos-daniilidis/github.io/blog/assets/all-pdf/daniilidis-resume.pdf | file links |
-| 111  | /blog/ | http://nikos-daniilidis.github.io/blog |  |  | file links |
-
-
+That's it. Happy blogging!
 
