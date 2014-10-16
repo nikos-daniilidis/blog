@@ -14,9 +14,9 @@ There are many cuts one can take through this data. Today I will only look at:
 
 The questions are answered in the two following figures:
 
-![number of publications]({{ site.url }}/assets/2014-06-01-phys-rev-1900-1970/numbers-vs-year-plot.png)
+![number of publications]({{ site.baseurl }}/assets/2014-06-01-phys-rev-1900-1970/numbers-vs-year-plot.png)
 
-![term probabilities]({{ site.url }}/assets/2014-06-01-phys-rev-1900-1970/probabiliites-vs-year-plot.png)
+![term probabilities]({{ site.baseurl }}/assets/2014-06-01-phys-rev-1900-1970/probabiliites-vs-year-plot.png)
 
 (note that in both figures the y axis shows the logarithm of the plotted quantity).
 

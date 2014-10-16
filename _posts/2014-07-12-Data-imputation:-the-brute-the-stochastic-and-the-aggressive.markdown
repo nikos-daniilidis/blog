@@ -10,25 +10,25 @@ I used two methods of data imputation (filling in missing data) for the doctor r
 
 The first thing I did was collect more data, bringing the total number of doctors to 930, of which ratings are available for 750. Now I can plot the same combination of scatter plots and histograms as I did on the previous blog post.
 
-![raw data]({{ site.url }}/assets/2014-07-12-imputation/new-data-raw.png)
+![raw data]({{ site.baseurl }}/assets/2014-07-12-imputation/new-data-raw.png)
 
 The histograms and $$ R^2$$ values are slightly different, but a lot of scatter remains. Most of the variance in the data cannot be explained by the simple regression models of the form $$ Y = \beta_0+\beta_1 X$$ which I use here.
 
 After aggressive imputation, I am left with 126 out of 930 doctors. However, the remaining doctors have all four ratings from the websites, which can make it easy to move ahead with data analysis. I proceed to inspect the data after aggressive imputation:
 
-![aggressive imputation]({{ site.url }}/assets/2014-07-12-imputation/new-data-aggressive-imput.png)
+![aggressive imputation]({{ site.baseurl }}/assets/2014-07-12-imputation/new-data-aggressive-imput.png)
 
 The level  of correlation between different ratings did not increase after getting rid of the missing values. This is evident from the $$ R^2$$ values for the linear fit models, but also visually from the amount of scatter in the scatter plots.
 
 I implemented two methods of mean imputation. "Brute" mean imputation replaces missing values with the means of existing corresponding values. "Stochastic" mean imputation replaces the missing values with random draws from a normal distribution with the mean and standard deviation of the existing corresponding values. Here I have a look at how they perform. Brute imputation results in this visualization:
 
-![mean imputation]({{ site.url }}/assets/2014-07-12-imputation/new-data-brute-mean-imput.png)
+![mean imputation]({{ site.baseurl }}/assets/2014-07-12-imputation/new-data-brute-mean-imput.png)
 
 The first thing to note is that I now get a large density of points near and along the diagonals of the scatter plots. This is very promising! It means that, although the ratings from individual websites show significant scatter when compared one by one, the aggregate picture which emerges by taking all ratings into account shows a large degree of correlation. A second way to see this is to look at the $$R^2$$ coefficients in the linear fits. The values have improved significantly over those I was getting in the original data without imputation, but also over the values I was  getting after aggressive imputation.
 
 The large density of points on the diagonals of the scatter plots reveals a limitation of the "brute" mean imputation method. Here's why: If I am missing two out of four ratings for a particular doctor, then I will fill their values with the same number (the mean of the existing ones). When I make a scatter-plot, these values will appear on the diagonal, creating an illusion of perfect correlation - a kind of false optimism of the method. This is why stochastic mean imputation is a good idea: By adding a random element to the imputed values, I reduce this fictitious correlation and counter balance the false optimism. In terms of fitting models to the imputed data, we can expect that adding the stochastic element will reduce  the amount of bias we introduce because  of the fictitious correlations. Here  is how the stochastic method looks:
 
-![stochastic imputation]({{ site.url }}/assets/2014-07-12-imputation/new-data-stoch-mean-imput.png)
+![stochastic imputation]({{ site.baseurl }}/assets/2014-07-12-imputation/new-data-stoch-mean-imput.png)
 
 As you can see, I am now getting a lower degree of correlation than with the brute method. This is clear from the $$ R^2$$ values in the linear fits, which are now 10-30% lower than they were after the "brute" mean imputation. This is a  good thing! It means we have partially solved the problem of over-optimism of our model.
 

@@ -4,11 +4,13 @@ lsi: false
 
 # Site settings
 title: Nikos Daniilidis
-email: nikos.daniilidis@gmail.com
 description: > # this means to ignore newlines until "baseurl:"
   A blog about science, technology, society, and everything in-between.
-baseurl: "/blog" # the subpath of your site, e.g. /blog/
-url: "http://nikos-daniilidis/github.io/blog" # the base hostname & protocol for your site http://ndnl.me/blog
+
+baseurl: "/blog"
+url: "http://nikos-daniilidis.github.io" 
+
+email: nikos.daniilidis@gmail.com
 twitter_username: ndaniilidis
 github_username:  nikos-daniilidis
 linked_in: https://www.linkedin.com/in/ndaniilidis

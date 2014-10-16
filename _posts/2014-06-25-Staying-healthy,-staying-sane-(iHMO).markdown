@@ -28,7 +28,7 @@ I am sharing the code which I used to plot and analyze the doctor ratings in the
 
 The following plot shows a summary of distributions of doctor ratings in the four websites, as well as the correlations between ratings of the same doctor between different websites.
 
-![raw ratings data]({{ site.url }}/assets/2014-06-25-staying-healthy-staying-sane/scatter_matrix_94010_5mi_94709_10mi.png)
+![raw ratings data]({{ site.baseurl }}/assets/2014-06-25-staying-healthy-staying-sane/scatter_matrix_94010_5mi_94709_10mi.png)
 
 Well, what have we here? The only thing that's clear is that the data is all over the place! But first, what exactly am I plotting?
 

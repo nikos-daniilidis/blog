@@ -6,7 +6,7 @@ categories: jekyll update
 ---
 The original intention of this post was to talk about using real analysis to understand a concept in set theory which bugged me. I consequently had to heavily edit the post, after friends informed me that I had gotten the logic aspect all wrong. So the post is really a cautionary tale about trying not to be the proverbial arrogant physicist [1](http://molbiohut.wordpress.com/2012/12/10/arrogance-of-physicists-towards-biology/),[2](http://scienceblogs.com/pharyngula/2011/02/16/why-do-physicists-think-they-a/),[3](http://galileospendulum.org/2011/02/17/the-arrogance-of-physicists/),[4](http://www.smbc-comics.com/index.php?db=comics&id=2556#comic), and about so called ["vacuous truths"](http://en.wikipedia.org/wiki/Vacuous_truth). In fact, it could be titled "How I learned to stop worrying and love the empty set".
 
-![blabbing physicist]({{ site.url }}/assets/2014-10-02-Life-in-vacuum/smbphysicist2.png)
+![blabbing physicist]({{ site.baseurl }}/assets/2014-10-02-Life-in-vacuum/smbphysicist2.png)
 
 The discussion which inspired me to start on this topic had to do with the correct implementation (in the [scala](http://www.scala-lang.org/) programming language) of a toolbox which allows the user to define mathematical sets, as well as a number of functions on those sets, for example union, intersection, difference, etc. In specific, I was in disagreement with two other programmers on what would be acceptable behavior for a function which checks if a condition $$ p(x)$$ is true for all elements $$ x$$ in a set, $$ S$$. Let's call this function forall. The sets for which we were implementing the function can contain integers only, so in scala syntax the definition of forall would be
 

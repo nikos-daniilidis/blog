@@ -8,7 +8,7 @@ This is going to be a technical post. I am looking into the behaviour of cluster
 
 Naturally, to me this result was the equivalent of what the picture below must have been to the members of the [flat earth society](http://theflatearthsociety.org/cms/): I thought "Nonsense! There must be a work around this!". Below are the efforts. Thankfully in blogging, unlike in academia, you are allowed to publish negative results ;-)
 
-![first ever picture of earth from space]({{ site.url }}/assets/2014-06-15-text-k-means/first-ever-earth-from-space.jpg)
+![first ever picture of earth from space]({{ site.baseurl }}/assets/2014-06-15-text-k-means/first-ever-earth-from-space.jpg)
 
 _First ever photograph of earth from space (credits: NASA)_
 
@@ -26,13 +26,13 @@ Instead of working with the Physical Review data, where things failed badly, let
 
 The following figure can give us an idea why: In this plot we see the probability that a randomly chosen text entry will fall into a given cluster. Darker blue means higher probability. Some of the clusters are well separated from all but one groups, for example "sci.space" corresponds pretty nicely to cluster #1. But we also see that some clusters, most notably #2 get a sizeable fraction of entries from all categories. We also see that most of the confusion is around computer hardware and graphics issues.
 
-![confusion matrix for text clustering]({{ site.url }}/assets/2014-06-15-text-k-means/clustering-7x7.png)
+![confusion matrix for text clustering]({{ site.baseurl }}/assets/2014-06-15-text-k-means/clustering-7x7.png)
 
 _Probability of assigning members of a given group to one of the clusters._
 
 Is there a way around this? Yes, partially. We can ask k-means to use more clusters, and hope that it will be able to capture more of the fine details in the topics we are trying to differentiate. Let's see how this goes. We push the number of clusters up to 1000, and assign each cluster to one of the seven groups according to the category of the majority of its members. We then look a the fraction of text entries which do not get properly classified in this process. The result is in the following figure (error-bars represent the standard deviation in classification error in 10 runs of the algorithm).
 
-![error vs number of clusters]({{ site.url }}/assets/2014-06-15-text-k-means/error-vs-clusters-l2-tf-idf-no-label.png)
+![error vs number of clusters]({{ site.baseurl }}/assets/2014-06-15-text-k-means/error-vs-clusters-l2-tf-idf-no-label.png)
 
 _Classification error vs number of clusters_
 

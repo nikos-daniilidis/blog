@@ -45,13 +45,13 @@ At the end of this process, I will have a _distribution_ of PCA scores for each 
 
 The first step is to check the implementation of a single iteration of the PCA algorithm. Here I perform PCA on a single realization of the data after stochastic mean imputation. I have implemented the PCA transformation in such a way that my PCA score is in the range between 0 and 1. The first thing is to check how the PCA score compares to the mean rating.
 
-![pca score vs mean]({{ site.url }}/assets/2014-07-14-picking-doctor/pca_vs_mean.png)
+![pca score vs mean]({{ site.baseurl }}/assets/2014-07-14-picking-doctor/pca_vs_mean.png)
 
 It is reassuring to see that the trend is linear. We also see that the  relation is not purely monotonic. This reflects the difference between PCA and the mean, which I already alluded to.
 
 The next thing to check is how the distribution of PCA scores looks for this particular realization of stochastic mean imputation.
 
-![pca score histogram]({{ site.url }}/assets/2014-07-14-picking-doctor/single_pca_histogram.png)
+![pca score histogram]({{ site.baseurl }}/assets/2014-07-14-picking-doctor/single_pca_histogram.png)
 
 The distribution looks similar to the ratings histograms from individual websites, which I showed in my previous posts. Of course, this is one particular draw from a distribution of PCA ratings.
 
@@ -59,7 +59,7 @@ This all looks as expected, and it is time to run the bootstrapping analysis on 
 
 To highlight the difference between single and double bootstrap, I am plotting the histograms of PCA scores for two doctors, one of whom having all four ratings and the other one having only two ratings in the original dataset. Here are the histograms (Doctor 7 in this example had 2 missing ratings, while Doctor 6 had 0 missing ratings):
 
-![single vs double bootstrapping]({{ site.url }}/assets/2014-07-14-picking-doctor/single_vs_double_bootstrap.png)
+![single vs double bootstrapping]({{ site.baseurl }}/assets/2014-07-14-picking-doctor/single_vs_double_bootstrap.png)
 
 The histograms give me a hint that the double bootstrap analysis was a step in the right direction. I am now getting more similar score distributions between doctors with missing ratings, and those who had no missing ratings, so I can be more confident that I am comparing different doctors on the same footing.
 
