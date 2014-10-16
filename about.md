@@ -4,7 +4,9 @@ title: About
 permalink: /about/
 ---
 
-I am a data scientist with a history in physics and electrical engineering ([resume here]({{ site.url }}/assets/all-pdf/daniilidis-resume.pdf?raw=true)). This is my blog about science, technology, society and everything in-between. For the time being, it is a copy of my [wordpress blog](http://oligotropos.wordpress.com/). 
+[<img class="center" src="/assets/test.png" width="100%" />](/assets/test.png)
+
+I am a data scientist with a history in physics and electrical engineering ([resume here]({{ site.url }}/assets/all-pdf/daniilidis-resume.pdf)). This is my blog about science, technology, society and everything in-between. For the time being, it is a copy of my [wordpress blog](http://oligotropos.wordpress.com/). 
 
 Until recently I have been a research physicist, working in condensed matter and atomic physics. The past few years I was studying quantum science, hybrid quantum devices as well as (very) classical noise at the UC Berkeley [ion trapping group](http://research.physics.berkeley.edu/haeffner/), and the [Innsbruck group](http://quantumoptics.at/). For my PhD work, I studied phase transitions in so called "superconducting vortex matter" (think of it as a tangle of magnetic rice noodles penetrating a superconductor and repelling each other) at [Brown](http://www.brown.edu/academics/physics/areas-research/condensed-matter-experiment/condensed-matter-experiment) and at [NIST](http://www.ncnr.nist.gov/). 
 
