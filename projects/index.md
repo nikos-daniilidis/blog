@@ -5,7 +5,7 @@ date:   2014-10-18 00:00:02
 categories: jekyll update
 ---
 
-* _Hadoop/MapReduce_: data exploration and analysis. Ongoing project. [Github](https://github.com/nikos-daniilidis/hadoop-mapreduce-o)/
+* _Hadoop/MapReduce_: data exploration and analysis. Ongoing project. [Github](https://github.com/nikos-daniilidis/hadoop-mapreduce-o)
 
 * _Find MD_: data mining and analysis of online doctor ratings data. [Github](https://github.com/nikos-daniilidis/find-md)
 
