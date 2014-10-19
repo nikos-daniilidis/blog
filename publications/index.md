@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: info
 title:  "Publications"
 date:   2014-10-14 00:00:02
 categories: jekyll update
